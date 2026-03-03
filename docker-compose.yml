@@ -1,0 +1,113 @@
+version: '3.8'
+
+services:
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: local_help_api
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - redis
+      - milvus
+      - minio
+    environment:
+      - DATABASE_URL=postgresql://help_user:help_pass@postgres:5432/helpdb
+      - REDIS_URL=redis://redis:6379/0
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MILVUS_HOST=milvus
+      - MILVUS_PORT=19530
+    volumes:
+      - ./models:/app/models      # локальные модели и токенизаторы
+      - ./data:/app/data          # индекс/векторы/куски документов
+      - ./logs:/app/logs
+    ports:
+      - "8000:8000"
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+
+  nginx:
+    image: nginx:stable
+    container_name: local_help_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./deploy/nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - api
+
+  postgres:
+    image: postgres:15
+    container_name: local_help_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: help_user
+      POSTGRES_PASSWORD: help_pass
+      POSTGRES_DB: helpdb
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d   # SQL dumps / init scripts
+
+  redis:
+    image: redis:7
+    container_name: local_help_redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+
+  milvus:
+    image: milvusdb/milvus:latest
+    container_name: local_help_milvus
+    restart: unless-stopped
+    ports:
+      - "19530:19530"
+      - "19121:19121"
+    environment:
+      # настройка storage backend — по умолчанию использует local filesystem
+      - "TZ=UTC"
+    volumes:
+      - milvus_data:/var/lib/milvus
+
+  minio:
+    image: minio/minio:latest
+    container_name: local_help_minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    container_name: local_help_worker
+    restart: unless-stopped
+    depends_on:
+      - redis
+      - postgres
+      - milvus
+    environment:
+      - DATABASE_URL=postgresql://help_user:help_pass@postgres:5432/helpdb
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ./models:/worker/models
+      - ./data:/worker/data
+
+volumes:
+  pg_data:
+  redis_data:
+  milvus_data:
+  minio_data:

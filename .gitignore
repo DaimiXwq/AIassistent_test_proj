@@ -1,0 +1,9 @@
+.env
+.vs
+.vscode
+*.pyc
+offline_packages
+db.sqlite3
+how_install.txt
+requirements.txt
+__pycache__/
