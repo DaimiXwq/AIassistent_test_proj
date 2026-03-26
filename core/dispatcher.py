@@ -1,5 +1,6 @@
 import os
 from parser_app.parsers.factory import ParserFactory
+from core.chunker import SmatChunker, TextChunker
 
 class SourceDispatcher:
 
@@ -14,7 +15,10 @@ class SourceDispatcher:
 
     @staticmethod
     def _postprocess(data):
-        #
-        # - чистим текст
-        # - разбиваем на чанки
-        return data
+        chunker = SmatChunker()
+        chunks = chunker.split_text(data)
+        return {
+            "text": data,
+            "chunks": chunks,
+            "metadata":metadata
+            }
