@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from .serializers import ParserFileSerializer
 from core.dispatcher import SourceDispatcher
+from db_server.services import DocumentService
 import tempfile
 
 class ParseDocumentView(APIView):
@@ -22,7 +23,13 @@ class ParseDocumentView(APIView):
 
             result = SourceDispatcher.process_file(tmp.name)
 
-            return Response(result, status=status.HTTP_200_OK)
+            document = DocumentService.save_document(result)
+
+            return Response({
+                "document_id": document.id,
+                "chunks_count": len(result["chunks"])
+                }, 
+                status=status.HTTP_200_OK)
 
         except Exception as e:
             return Response(
