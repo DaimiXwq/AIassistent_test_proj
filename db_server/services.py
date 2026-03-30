@@ -1,4 +1,5 @@
-from .models import Document, Chunk
+from .models import Document, Chunk, Embedding
+from core.embeddings import EmbeddingService
 
 class DocumentService:
 
@@ -11,6 +12,7 @@ class DocumentService:
         )
 
         chunks = []
+        embedding_service = EmbeddingService()
 
         for i, chunk_text in enumerate(data["chunks"]):
             chunk = Chunk.objects.create(
@@ -19,5 +21,12 @@ class DocumentService:
                 index=i
             )
             chunks.append(chunk)
+
+            vector = embedding_service.generate(chunk_text)
+
+            Embedding.objects.create(
+                chunk=chunk,
+                vector=vector
+            )
         
         return document

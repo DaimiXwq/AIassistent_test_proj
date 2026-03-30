@@ -15,3 +15,4 @@ class Chunk(models.Model):
 class Embedding(models.Model):
     chunk = models.OneToOneField(Chunk, on_delete=models.CASCADE)
     vector = models.JSONField() # заменим на pgvector
+    created_at = models.DateTimeField(auto_now_add=True)
