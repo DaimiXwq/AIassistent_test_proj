@@ -16,9 +16,9 @@ class SourceDispatcher:
     @staticmethod
     def _postprocess(data):
         chunker = SmatChunker()
-        chunks = chunker.split_text(data)
+        chunks = chunker.split_text(data["text"])
         return {
-            "text": data,
+            "text": data["text"],
             "chunks": chunks,
-            "metadata":metadata
+            "metadata":data["metadata"]
             }

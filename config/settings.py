@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "core",
     "db_server",
     "ai_assistent_app",
+    "parser_app"
 ]
 
 MIDDLEWARE = [
