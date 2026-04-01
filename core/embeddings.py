@@ -1,5 +1,5 @@
 import numpy as np
-from sentense_transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer
 
 class EmbeddingService:
 
