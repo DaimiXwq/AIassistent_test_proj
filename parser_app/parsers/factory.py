@@ -1,7 +1,7 @@
 from .pdf_parser import PDFParser
 #from .docx_parser import DOCXParser
 from .txt_parser import TXTParser
-#from .cvs_parser import CSVParser
+from .csv_parser import CSVParser
 
 class ParserFactory:
 
@@ -9,7 +9,8 @@ class ParserFactory:
         "pdf": PDFParser,
         "docx": "DOCXParser",
         "txt": TXTParser,
-        "cvs": "CSVParser",
+        "csv": CSVParser,
+        "cvs": CSVParser,
     }
     @classmethod
     def get_parser(cls, file_type):
