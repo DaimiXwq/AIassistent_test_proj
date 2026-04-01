@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual Pipeline Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 24px; line-height: 1.4; }
+        section { border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-bottom: 20px; }
+        h1, h2 { margin-top: 0; }
+        label { display: block; margin: 8px 0; }
+        input, button { margin-top: 4px; padding: 8px; font-size: 14px; }
+        button { cursor: pointer; }
+        .result-box { margin-top: 12px; background: #f6f7fb; border-radius: 6px; padding: 12px; white-space: pre-wrap; word-break: break-word; }
+        .error { color: #b00020; }
+        .ok { color: #0a6e22; }
+        .search-item { border-top: 1px solid #ddd; padding: 10px 0; }
+        .search-item:first-child { border-top: none; }
+    </style>
+</head>
+<body>
+    <h1>Manual Test UI</h1>
+
+    <section>
+        <h2>Upload</h2>
+        <label>
+            Файл
+            <input id="upload-file" type="file" />
+        </label>
+        <button id="upload-btn" type="button">Загрузить и распарсить</button>
+        <div id="upload-result" class="result-box">Ожидание загрузки...</div>
+    </section>
+
+    <section>
+        <h2>Search</h2>
+        <label>
+            query
+            <input id="search-query" type="text" placeholder="Введите запрос" />
+        </label>
+        <label>
+            top_k
+            <input id="search-top-k" type="number" value="5" min="1" />
+        </label>
+        <button id="search-btn" type="button">Искать</button>
+        <div id="search-result" class="result-box">Ожидание поиска...</div>
+    </section>
+
+    <script>
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return '';
+        }
+
+        function formatJson(value) {
+            return JSON.stringify(value, null, 2);
+        }
+
+        async function safeParseJson(response) {
+            const text = await response.text();
+            try {
+                return text ? JSON.parse(text) : null;
+            } catch (_err) {
+                return { raw: text };
+            }
+        }
+
+        function renderUploadResult(payload, isError = false) {
+            const box = document.getElementById('upload-result');
+            box.className = `result-box ${isError ? 'error' : 'ok'}`;
+            box.textContent = payload;
+        }
+
+        function renderSearchResult(html, isError = false) {
+            const box = document.getElementById('search-result');
+            box.className = `result-box ${isError ? 'error' : ''}`;
+            box.innerHTML = html;
+        }
+
+        document.getElementById('upload-btn').addEventListener('click', async () => {
+            const file = document.getElementById('upload-file').files[0];
+            if (!file) {
+                renderUploadResult('Ошибка: выберите файл перед отправкой.', true);
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+            renderUploadResult('Загрузка...');
+
+            try {
+                const response = await fetch('/api/parser/parse/', {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                    body: formData,
+                });
+                const data = await safeParseJson(response);
+
+                if (!response.ok) {
+                    renderUploadResult(`HTTP ${response.status}: ${formatJson(data || { error: 'Unknown API error' })}`, true);
+                    return;
+                }
+
+                renderUploadResult(formatJson({
+                    document_id: data?.document_id ?? null,
+                    chunks_count: data?.chunks_count ?? null,
+                    raw: data,
+                }));
+            } catch (err) {
+                renderUploadResult(`Сетевая ошибка: ${err.message}`, true);
+            }
+        });
+
+        document.getElementById('search-btn').addEventListener('click', async () => {
+            const query = document.getElementById('search-query').value.trim();
+            const top_k = Number.parseInt(document.getElementById('search-top-k').value || '5', 10);
+
+            if (!query) {
+                renderSearchResult('Ошибка: поле query не должно быть пустым.', true);
+                return;
+            }
+
+            renderSearchResult('Поиск...');
+
+            try {
+                const response = await fetch('/api/core/search/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    body: JSON.stringify({ query, top_k }),
+                });
+                const data = await safeParseJson(response);
+
+                if (!response.ok) {
+                    renderSearchResult(`<strong>HTTP ${response.status}</strong><pre>${formatJson(data || { error: 'Unknown API error' })}</pre>`, true);
+                    return;
+                }
+
+                const results = Array.isArray(data?.results) ? data.results : [];
+                if (!results.length) {
+                    renderSearchResult('Результаты не найдены.');
+                    return;
+                }
+
+                const html = results.map((item, index) => {
+                    const chunkText = item.text || item.chunk || item.content || '';
+                    const score = item.score ?? item.similarity ?? 'n/a';
+                    const metadata = item.metadata ?? {};
+                    return `
+                        <div class="search-item">
+                            <div><strong>#${index + 1}</strong></div>
+                            <div><strong>score:</strong> ${score}</div>
+                            <div><strong>text:</strong> ${chunkText}</div>
+                            <details>
+                                <summary>metadata</summary>
+                                <pre>${formatJson(metadata)}</pre>
+                            </details>
+                        </div>
+                    `;
+                }).join('');
+
+                renderSearchResult(html);
+            } catch (err) {
+                renderSearchResult(`Сетевая ошибка: ${err.message}`, true);
+            }
+        });
+    </script>
+</body>
+</html>
