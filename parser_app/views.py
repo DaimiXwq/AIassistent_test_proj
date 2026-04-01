@@ -3,7 +3,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import ParserFileSerializer
+from .serializer import ParserFileSerializer
 from core.dispatcher import SourceDispatcher
 from db_server.services import DocumentService
 import tempfile
