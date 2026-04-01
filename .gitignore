@@ -1,10 +1,11 @@
 .env
 .vs
 .vscode
+.venv
 *.pyc
 offline_packages
 db.sqlite3
 how_install.txt
-requirements.txt
+wheelhouse
 __pycache__/
 popexplosives.pdf
