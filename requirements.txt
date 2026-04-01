@@ -13,3 +13,4 @@ huggingface-hub==0.29.2
 tokenizers==0.21.1
 safetensors==0.5.3
 tqdm==4.67.1
+requests==2.32.3
