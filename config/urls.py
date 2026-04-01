@@ -16,7 +16,13 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from parser_app.views import ParseDocumentView
+from db_server.views import SaveDocumentView
+from core.views import SearchView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path("api/v1/parse/", ParseDocumentView.as_view(), name="parse-document"),
+    path("api/v1/documents/save/", SaveDocumentView.as_view(), name="save-document"),
+    path("api/v1/search/", SearchView.as_view(), name="search"),
 ]
