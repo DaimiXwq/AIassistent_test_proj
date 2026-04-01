@@ -17,7 +17,10 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 
+from core.views import ManualTestPageView
+
 urlpatterns = [
+    path("manual-test/", ManualTestPageView.as_view(), name="manual-test"),
     path("admin/", admin.site.urls),
     path("api/parser/", include(("parser_app.urls", "parser_app"), namespace="parser_app")),
     path("api/db/", include(("db_server.urls", "db_server"), namespace="db_server")),
