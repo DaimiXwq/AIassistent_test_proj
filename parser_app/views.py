@@ -7,6 +7,7 @@ from .serializer import ParserFileSerializer
 from core.dispatcher import SourceDispatcher
 from db_server.services import DocumentService
 import tempfile
+import os
 
 class ParseDocumentView(APIView):
 
@@ -16,12 +17,17 @@ class ParseDocumentView(APIView):
 
         file = serializer.validated_data["file"]
 
+        tmp_path = None
+
         try:
-            with tempfile.NamedTemporaryFile(delete=False) as tmp:
+            _, file_ext = os.path.splitext(file.name or "")
+
+            with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp:
                 for chunk in file.chunks():
                     tmp.write(chunk)
+                tmp_path = tmp.name
 
-            result = SourceDispatcher.process_file(tmp.name)
+            result = SourceDispatcher.process_file(tmp_path)
 
             document = DocumentService.save_document(result)
 
@@ -36,3 +42,6 @@ class ParseDocumentView(APIView):
                 {"error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+        finally:
+            if tmp_path and os.path.exists(tmp_path):
+                os.remove(tmp_path)
