@@ -1,9 +1,9 @@
-from abc import ABC, abstractclassmethod
+from abc import ABC, abstractmethod
 
 class BaseParser(ABC):
 
-    @abstractclassmethod
-    def parse(self, sourse):
+    @abstractmethod
+    def parse(self, source):
         pass
 
     def normalize(self, text, metadata=None):
