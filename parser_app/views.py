@@ -1,4 +1,6 @@
 import json
+import logging
+import os
 import tempfile
 from urllib import error, request as urlrequest
 
@@ -9,6 +11,8 @@ from rest_framework.views import APIView
 
 from parser_app.parsers.factory import ParserFactory
 from parser_app.serializer import ParserFileSerializer
+
+logger = logging.getLogger(__name__)
 
 
 class ParseDocumentView(APIView):
@@ -30,15 +34,17 @@ class ParseDocumentView(APIView):
         serializer.is_valid(raise_exception=True)
 
         file = serializer.validated_data["file"]
+        tmp_path = None
 
         try:
             with tempfile.NamedTemporaryFile(delete=False) as tmp:
+                tmp_path = tmp.name
                 for chunk in file.chunks():
                     tmp.write(chunk)
 
             ext = file.name.split(".")[-1].lower()
             parser = ParserFactory.get_parser(ext)
-            parsed_data = parser.parse(tmp.name)
+            parsed_data = parser.parse(tmp_path)
 
             chunk_result = self._post_json(
                 "/api/core/chunk/",
@@ -73,3 +79,9 @@ class ParseDocumentView(APIView):
                 {"error": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
+        finally:
+            if tmp_path and os.path.exists(tmp_path):
+                try:
+                    os.remove(tmp_path)
+                except OSError:
+                    logger.exception("Failed to remove temporary file: %s", tmp_path)
