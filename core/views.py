@@ -53,3 +53,7 @@ class ChunkTextView(APIView):
 
 class ManualTestPageView(TemplateView):
     template_name = "manual_test.html"
+
+
+class StartPageView(TemplateView):
+    template_name = "start_page.html"
