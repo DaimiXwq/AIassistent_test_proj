@@ -14,7 +14,7 @@ SUPPORTED_FORMATS = (
     "md",
     "markdown",
     "tsv",
-    "djv",
+    "djvu",
     "xls",
     "xlsx",
     "odt",

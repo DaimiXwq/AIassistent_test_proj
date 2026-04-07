@@ -1,5 +1,5 @@
 from .csv_parser import CSVParser
-from .djv_parser import DJVParser
+from .djvu_parser import DJVUParser
 from .doc_parser import DOCParser
 from .docx_parser import DOCXParser
 from .formats import SUPPORTED_FORMATS
@@ -23,7 +23,7 @@ AVAILABLE_PARSERS = {
     "md": MarkdownParser,
     "markdown": MarkdownParser,
     "tsv": TSVParser,
-    "djv": DJVParser,
+    "djvu": DJVUParser,
     "xls": XLSParser,
     "xlsx": XLSXParser,
     "odt": ODTParser,
