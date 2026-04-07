@@ -1,8 +1,5 @@
-#from django.test import TestCase
+"""Root-level test helpers.
 
-# Create your tests here.
-from core.dispatcher import SourceDispatcher
-   
-
-print(SourceDispatcher.process_file("C:\\Users\\Kalinkin\\Desktop\\AI_assistent\\requirements.txt"))
-print(SourceDispatcher.process_file("C:\\Users\\Kalinkin\\Desktop\\AI_assistent\\popexplosives.pdf"))
+Intentionally left without executable test logic so importing this module
+has no side effects.
+"""
