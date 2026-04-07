@@ -1,6 +1,7 @@
 from django.test import SimpleTestCase
 
 from parser_app.parsers.factory import ParserFactory
+from parser_app.parsers.formats import SUPPORTED_FORMATS
 from parser_app.parsers.json_parser import JSONParser
 from parser_app.parsers.markdown_parser import MarkdownParser
 from parser_app.parsers.tsv_parser import TSVParser
@@ -16,3 +17,6 @@ class ParserFactoryTests(SimpleTestCase):
     def test_factory_raises_for_unsupported_format(self):
         with self.assertRaises(ValueError):
             ParserFactory.get_parser("exe")
+
+    def test_factory_parsers_match_supported_formats(self):
+        self.assertSetEqual(set(ParserFactory.parsers.keys()), set(SUPPORTED_FORMATS))
