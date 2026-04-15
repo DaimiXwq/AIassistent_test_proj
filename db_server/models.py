@@ -1,3 +1,5 @@
+from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 
 
@@ -10,8 +12,23 @@ class KnowledgeBase(models.Model):
     slug = models.SlugField(unique=True)
     visibility = models.CharField(max_length=20, choices=Visibility.choices)
     description = models.TextField(blank=True)
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="owned_knowledge_bases",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def clean(self):
+        if self.visibility == self.Visibility.PERSONAL and self.owner_id is None:
+            raise ValidationError({"owner": "Personal knowledge base must have an owner."})
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
 
 
 class Document(models.Model):
@@ -21,6 +38,13 @@ class Document(models.Model):
         KnowledgeBase,
         on_delete=models.CASCADE,
         related_name="documents",
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="created_documents",
     )
     created_at = models.DateTimeField(auto_now_add=True)
 

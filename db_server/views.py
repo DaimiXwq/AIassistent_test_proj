@@ -20,11 +20,19 @@ class DocumentPipelineResultCreateView(APIView):
             "chunks": chunks,
             "title": request.data.get("title"),
             "source": request.data.get("source"),
+            "knowledge_base_id": request.data.get("knowledge_base_id"),
+            "created_by": request.user if request.user.is_authenticated else None,
         }
         document = DocumentService.save_document(payload)
 
         return Response(
-            {"document_id": document.id, "chunks_count": len(chunks)},
+            {
+                "document_id": document.id,
+                "chunks_count": len(chunks),
+                "knowledge_base_id": document.knowledge_base_id,
+                "visibility": document.knowledge_base.visibility,
+                "owner_id": document.knowledge_base.owner_id,
+            },
             status=status.HTTP_201_CREATED,
         )
 
@@ -45,6 +53,9 @@ class DocumentRetrieveView(APIView):
                 "title": document.title,
                 "source": document.source,
                 "created_at": document.created_at,
+                "knowledge_base_id": document.knowledge_base_id,
+                "visibility": document.knowledge_base.visibility,
+                "owner_id": document.knowledge_base.owner_id,
                 "chunks": [
                     {
                         "id": chunk.id,
