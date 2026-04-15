@@ -1,6 +1,7 @@
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
 from unittest.mock import patch
 
+from core.chunker import SmatChunker
 from core.search import SearchService
 from db_server.models import Chunk, Document, Embedding, KnowledgeBase
 
@@ -41,3 +42,21 @@ class SearchServiceSoftDeleteTests(TestCase):
 
         self.assertIn(active_document.id, document_ids)
         self.assertNotIn(deleted_document.id, document_ids)
+
+
+class SearchViewValidationTests(TestCase):
+    def test_search_rejects_non_positive_top_k(self):
+        response = self.client.post(
+            "/api/core/search/",
+            {"query": "hello", "top_k": 0},
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["error"], "'top_k' must be greater than 0.")
+
+
+class SmatChunkerTests(SimpleTestCase):
+    def test_split_text_does_not_return_empty_first_chunk(self):
+        chunker = SmatChunker(max_lenght=5)
+        result = chunker.split_text("abcdefghij")
+        self.assertEqual(result, ["abcdefghij"])

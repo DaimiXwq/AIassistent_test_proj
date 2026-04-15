@@ -60,6 +60,23 @@ class DocumentSoftDeleteApiTests(TestCase):
 
         self.assertEqual(response.status_code, 404)
 
+    def test_anonymous_document_list_excludes_personal_documents(self):
+        url = reverse("db_server:list-documents")
+
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 200)
+        ids = {item["id"] for item in response.json()["results"]}
+        self.assertIn(self.document_1.id, ids)
+        self.assertNotIn(self.document_2.id, ids)
+
+    def test_anonymous_document_retrieve_returns_404_for_personal_document(self):
+        url = reverse("db_server:get-document", args=[self.document_2.id])
+
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 404)
+
     def test_document_delete_soft_deletes_document(self):
         url = reverse("db_server:get-document", args=[self.document_1.id])
 

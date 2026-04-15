@@ -1,9 +1,10 @@
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.db.models import Q
 
-from db_server.models import Document
-from db_server.services import DocumentService
+from db_server.models import Document, KnowledgeBase
+from db_server.services import DocumentService, KnowledgeBaseAccessService
 
 
 class DocumentListView(APIView):
@@ -11,6 +12,19 @@ class DocumentListView(APIView):
 
     def get(self, request):
         queryset = Document.objects.select_related("knowledge_base")
+        user = request.user if request.user.is_authenticated else None
+
+        if user is None:
+            queryset = queryset.filter(knowledge_base__visibility=KnowledgeBase.Visibility.SHARED)
+        else:
+            queryset = queryset.filter(
+                Q(knowledge_base__visibility=KnowledgeBase.Visibility.SHARED)
+                | Q(knowledge_base__owner=user)
+                | Q(
+                    knowledge_base__members__user=user,
+                    knowledge_base__members__role__in=KnowledgeBaseAccessService.READ_ROLES,
+                )
+            ).distinct()
 
         knowledge_base_id = request.query_params.get("knowledge_base")
         if knowledge_base_id:
@@ -113,6 +127,12 @@ class DocumentRetrieveView(APIView):
         document = Document.objects.filter(id=document_id).prefetch_related("chunks").first()
 
         if document is None:
+            return Response(
+                {"error": "Document not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        actor_user = request.user if request.user.is_authenticated else None
+        if not KnowledgeBaseAccessService.can_read_documents(document.knowledge_base, actor_user):
             return Response(
                 {"error": "Document not found."},
                 status=status.HTTP_404_NOT_FOUND,

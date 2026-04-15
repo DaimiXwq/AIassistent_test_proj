@@ -75,8 +75,9 @@ class ParseDocumentView(APIView):
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
         except Exception as e:
+            logger.exception("Unexpected parser pipeline failure")
             return Response(
-                {"error": str(e)},
+                {"error": "Unexpected server error while processing document."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
         finally:
