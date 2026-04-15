@@ -19,7 +19,7 @@ class AdminUserCreateView(APIView):
         actor = request.user
         if not (is_admin_user(actor) or is_head_of_department_user(actor)):
             return Response(
-                {"error": "Only admin or head_of_department can create users."},
+                {"error": "Создавать пользователей могут только роли admin и head_of_department."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -28,7 +28,7 @@ class AdminUserCreateView(APIView):
 
         if is_head_of_department_user(actor) and serializer.validated_data["group_type"] != GROUP_TYPE_STANDARD:
             return Response(
-                {"error": "Head of department can create only standard users."},
+                {"error": "Роль head_of_department может создавать только пользователей группы standard."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -64,13 +64,13 @@ class AdminUserDeactivateView(APIView):
         actor = request.user
         if not is_admin_user(actor):
             return Response(
-                {"error": "Only admin can deactivate users."},
+                {"error": "Деактивировать пользователей может только роль admin."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
         user = User.objects.filter(id=user_id).first()
         if user is None:
-            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Пользователь не найден."}, status=status.HTTP_404_NOT_FOUND)
 
         user.is_active = False
         user.save(update_fields=["is_active"])
@@ -85,13 +85,13 @@ class AdminUserRoleUpdateView(APIView):
         actor = request.user
         if not is_admin_user(actor):
             return Response(
-                {"error": "Only admin can change group type and access level."},
+                {"error": "Изменять группу и уровень доступа может только роль admin."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
         user = User.objects.filter(id=user_id).first()
         if user is None:
-            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Пользователь не найден."}, status=status.HTTP_404_NOT_FOUND)
 
         serializer = UserRoleUpdateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

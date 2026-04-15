@@ -3,46 +3,142 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manual Pipeline Test</title>
+    <title>Ручная проверка системы</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 24px; line-height: 1.4; }
         section { border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-bottom: 20px; }
         h1, h2 { margin-top: 0; }
         label { display: block; margin: 8px 0; }
-        input, button { margin-top: 4px; padding: 8px; font-size: 14px; }
+        input, select, button { margin-top: 4px; padding: 8px; font-size: 14px; }
         button { cursor: pointer; }
         .result-box { margin-top: 12px; background: #f6f7fb; border-radius: 6px; padding: 12px; white-space: pre-wrap; word-break: break-word; }
         .error { color: #b00020; }
         .ok { color: #0a6e22; }
         .search-item { border-top: 1px solid #ddd; padding: 10px 0; }
         .search-item:first-child { border-top: none; }
+        .muted { color: #5f6b7a; font-size: 13px; }
+        .readonly-note { color: #7d4c00; font-weight: 700; }
     </style>
 </head>
 <body>
-    <h1>Manual Test UI</h1>
+    <h1>Ручная проверка системы</h1>
 
     <section>
-        <h2>Upload</h2>
+        <h2>Текущий пользователь</h2>
+        <p><strong>Логин:</strong> {{ current_user.username }}</p>
+        <p><strong>Группа:</strong> {{ current_user.group_type }}</p>
+        <p><strong>Уровень доступа:</strong> {{ current_user.access_level }}</p>
+        <p class="muted">Доступ к этой странице разрешён только для ролей <code>admin</code> и <code>head_of_department</code>.</p>
+    </section>
+
+    <section>
+        <h2>Проверка загрузки документа</h2>
         <label>
             Файл
             <input id="upload-file" type="file" />
         </label>
-        <button id="upload-btn" type="button">Загрузить и распарсить</button>
+        <button id="upload-btn" type="button">Загрузить и обработать</button>
         <div id="upload-result" class="result-box">Ожидание загрузки...</div>
     </section>
 
     <section>
-        <h2>Search</h2>
+        <h2>Проверка поиска</h2>
         <label>
-            query
-            <input id="search-query" type="text" placeholder="Введите запрос" />
+            Поисковый запрос
+            <input id="search-query" type="text" placeholder="Введите поисковый запрос" />
         </label>
         <label>
-            top_k
+            Количество результатов (top_k)
             <input id="search-top-k" type="number" value="5" min="1" />
         </label>
-        <button id="search-btn" type="button">Искать</button>
+        <button id="search-btn" type="button">Выполнить поиск</button>
         <div id="search-result" class="result-box">Ожидание поиска...</div>
+    </section>
+
+    <section>
+        <h2>Проверка создания пользователя</h2>
+        {% if can_create_users %}
+        <label>
+            Логин
+            <input id="create-username" type="text" placeholder="new_user" />
+        </label>
+        <label>
+            Email
+            <input id="create-email" type="email" placeholder="new_user@example.com" />
+        </label>
+        <label>
+            Пароль
+            <input id="create-password" type="text" placeholder="TemporaryPass123" />
+        </label>
+        <label>
+            Группа
+            <select id="create-group-type">
+                <option value="standard">standard</option>
+                <option value="head_of_department">head_of_department</option>
+                <option value="admin">admin</option>
+            </select>
+        </label>
+        <label>
+            Уровень доступа
+            <select id="create-access-level">
+                <option value="4">4</option>
+                <option value="3">3</option>
+                <option value="2">2</option>
+                <option value="1">1</option>
+                <option value="admin">admin</option>
+            </select>
+        </label>
+        <button id="create-user-btn" type="button">Создать пользователя</button>
+        {% else %}
+        <p class="readonly-note">Недостаточно прав: создание пользователя недоступно для текущей роли.</p>
+        {% endif %}
+        <div id="create-user-result" class="result-box">Ожидание проверки...</div>
+    </section>
+
+    <section>
+        <h2>Проверка назначения прав</h2>
+        {% if can_manage_roles %}
+        <label>
+            ID пользователя
+            <input id="role-user-id" type="number" min="1" placeholder="1" />
+        </label>
+        <label>
+            Новая группа
+            <select id="role-group-type">
+                <option value="standard">standard</option>
+                <option value="head_of_department">head_of_department</option>
+                <option value="admin">admin</option>
+            </select>
+        </label>
+        <label>
+            Новый уровень доступа
+            <select id="role-access-level">
+                <option value="4">4</option>
+                <option value="3">3</option>
+                <option value="2">2</option>
+                <option value="1">1</option>
+                <option value="admin">admin</option>
+            </select>
+        </label>
+        <button id="update-role-btn" type="button">Назначить права</button>
+        {% else %}
+        <p class="readonly-note">Недостаточно прав: назначение прав доступно только для роли admin.</p>
+        {% endif %}
+        <div id="update-role-result" class="result-box">Ожидание проверки...</div>
+    </section>
+
+    <section>
+        <h2>Проверка удаления (деактивации) пользователя</h2>
+        {% if can_delete_users %}
+        <label>
+            ID пользователя
+            <input id="delete-user-id" type="number" min="1" placeholder="1" />
+        </label>
+        <button id="delete-user-btn" type="button">Деактивировать пользователя</button>
+        {% else %}
+        <p class="readonly-note">Недостаточно прав: удаление доступно только для роли admin.</p>
+        {% endif %}
+        <div id="delete-user-result" class="result-box">Ожидание проверки...</div>
     </section>
 
     <script>
@@ -66,9 +162,16 @@
             }
         }
 
-        function renderUploadResult(payload, isError = false) {
-            const box = document.getElementById('upload-result');
-            box.className = `result-box ${isError ? 'error' : 'ok'}`;
+        function extractErrorMessage(data, fallback = 'Неизвестная ошибка API.') {
+            if (!data) return fallback;
+            if (typeof data === 'string') return data;
+            if (typeof data.error === 'string') return data.error;
+            return formatJson(data);
+        }
+
+        function renderResult(elementId, payload, isError = false, isSuccess = false) {
+            const box = document.getElementById(elementId);
+            box.className = `result-box ${isError ? 'error' : ''} ${isSuccess ? 'ok' : ''}`;
             box.textContent = payload;
         }
 
@@ -78,16 +181,16 @@
             box.innerHTML = html;
         }
 
-        document.getElementById('upload-btn').addEventListener('click', async () => {
+        document.getElementById('upload-btn')?.addEventListener('click', async () => {
             const file = document.getElementById('upload-file').files[0];
             if (!file) {
-                renderUploadResult('Ошибка: выберите файл перед отправкой.', true);
+                renderResult('upload-result', 'Ошибка: выберите файл перед отправкой.', true);
                 return;
             }
 
             const formData = new FormData();
             formData.append('file', file);
-            renderUploadResult('Загрузка...');
+            renderResult('upload-result', 'Выполняется загрузка...');
 
             try {
                 const response = await fetch('/api/parser/parse/', {
@@ -98,30 +201,31 @@
                 const data = await safeParseJson(response);
 
                 if (!response.ok) {
-                    renderUploadResult(`HTTP ${response.status}: ${formatJson(data || { error: 'Unknown API error' })}`, true);
+                    renderResult('upload-result', `Ошибка HTTP ${response.status}: ${extractErrorMessage(data)}`, true);
                     return;
                 }
 
-                renderUploadResult(formatJson({
+                renderResult('upload-result', formatJson({
+                    сообщение: 'Загрузка и обработка выполнены.',
                     document_id: data?.document_id ?? null,
                     chunks_count: data?.chunks_count ?? null,
                     raw: data,
-                }));
+                }), false, true);
             } catch (err) {
-                renderUploadResult(`Сетевая ошибка: ${err.message}`, true);
+                renderResult('upload-result', `Сетевая ошибка: ${err.message}`, true);
             }
         });
 
-        document.getElementById('search-btn').addEventListener('click', async () => {
+        document.getElementById('search-btn')?.addEventListener('click', async () => {
             const query = document.getElementById('search-query').value.trim();
             const top_k = Number.parseInt(document.getElementById('search-top-k').value || '5', 10);
 
             if (!query) {
-                renderSearchResult('Ошибка: поле query не должно быть пустым.', true);
+                renderSearchResult('Ошибка: поле «Поисковый запрос» не должно быть пустым.', true);
                 return;
             }
 
-            renderSearchResult('Поиск...');
+            renderSearchResult('Выполняется поиск...');
 
             try {
                 const response = await fetch('/api/core/search/', {
@@ -135,7 +239,7 @@
                 const data = await safeParseJson(response);
 
                 if (!response.ok) {
-                    renderSearchResult(`<strong>HTTP ${response.status}</strong><pre>${formatJson(data || { error: 'Unknown API error' })}</pre>`, true);
+                    renderSearchResult(`<strong>Ошибка HTTP ${response.status}</strong><pre>${extractErrorMessage(data)}</pre>`, true);
                     return;
                 }
 
@@ -147,15 +251,15 @@
 
                 const html = results.map((item, index) => {
                     const chunkText = item.text || item.chunk || item.content || '';
-                    const score = item.score ?? item.similarity ?? 'n/a';
+                    const score = item.score ?? item.similarity ?? 'н/д';
                     const metadata = item.metadata ?? {};
                     return `
                         <div class="search-item">
                             <div><strong>#${index + 1}</strong></div>
-                            <div><strong>score:</strong> ${score}</div>
-                            <div><strong>text:</strong> ${chunkText}</div>
+                            <div><strong>Релевантность:</strong> ${score}</div>
+                            <div><strong>Текст:</strong> ${chunkText}</div>
                             <details>
-                                <summary>metadata</summary>
+                                <summary>Метаданные</summary>
                                 <pre>${formatJson(metadata)}</pre>
                             </details>
                         </div>
@@ -165,6 +269,111 @@
                 renderSearchResult(html);
             } catch (err) {
                 renderSearchResult(`Сетевая ошибка: ${err.message}`, true);
+            }
+        });
+
+        document.getElementById('create-user-btn')?.addEventListener('click', async () => {
+            const username = document.getElementById('create-username').value.trim();
+            const email = document.getElementById('create-email').value.trim();
+            const password = document.getElementById('create-password').value.trim();
+            const group_type = document.getElementById('create-group-type').value;
+            const access_level = document.getElementById('create-access-level').value;
+
+            if (!username || !password) {
+                renderResult('create-user-result', 'Ошибка: заполните обязательные поля «Логин» и «Пароль».', true);
+                return;
+            }
+
+            renderResult('create-user-result', 'Выполняется создание пользователя...');
+
+            try {
+                const response = await fetch('/api/users/admin/users/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    body: JSON.stringify({ username, email, password, group_type, access_level }),
+                });
+                const data = await safeParseJson(response);
+
+                if (!response.ok) {
+                    renderResult('create-user-result', `Ошибка HTTP ${response.status}: ${extractErrorMessage(data)}`, true);
+                    return;
+                }
+
+                renderResult('create-user-result', formatJson({
+                    сообщение: 'Пользователь успешно создан.',
+                    user: data,
+                }), false, true);
+            } catch (err) {
+                renderResult('create-user-result', `Сетевая ошибка: ${err.message}`, true);
+            }
+        });
+
+        document.getElementById('update-role-btn')?.addEventListener('click', async () => {
+            const userId = document.getElementById('role-user-id').value.trim();
+            const group_type = document.getElementById('role-group-type').value;
+            const access_level = document.getElementById('role-access-level').value;
+
+            if (!userId) {
+                renderResult('update-role-result', 'Ошибка: укажите ID пользователя.', true);
+                return;
+            }
+
+            renderResult('update-role-result', 'Выполняется назначение прав...');
+
+            try {
+                const response = await fetch(`/api/users/admin/users/${userId}/role-access/`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                    body: JSON.stringify({ group_type, access_level }),
+                });
+                const data = await safeParseJson(response);
+
+                if (!response.ok) {
+                    renderResult('update-role-result', `Ошибка HTTP ${response.status}: ${extractErrorMessage(data)}`, true);
+                    return;
+                }
+
+                renderResult('update-role-result', formatJson({
+                    сообщение: 'Права пользователя успешно обновлены.',
+                    user: data,
+                }), false, true);
+            } catch (err) {
+                renderResult('update-role-result', `Сетевая ошибка: ${err.message}`, true);
+            }
+        });
+
+        document.getElementById('delete-user-btn')?.addEventListener('click', async () => {
+            const userId = document.getElementById('delete-user-id').value.trim();
+            if (!userId) {
+                renderResult('delete-user-result', 'Ошибка: укажите ID пользователя.', true);
+                return;
+            }
+
+            renderResult('delete-user-result', 'Выполняется деактивация пользователя...');
+
+            try {
+                const response = await fetch(`/api/users/admin/users/${userId}/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken'),
+                    },
+                });
+
+                if (!response.ok) {
+                    const data = await safeParseJson(response);
+                    renderResult('delete-user-result', `Ошибка HTTP ${response.status}: ${extractErrorMessage(data)}`, true);
+                    return;
+                }
+
+                renderResult('delete-user-result', 'Пользователь успешно деактивирован.', false, true);
+            } catch (err) {
+                renderResult('delete-user-result', `Сетевая ошибка: ${err.message}`, true);
             }
         });
     </script>

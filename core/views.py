@@ -1,3 +1,4 @@
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.views.generic import TemplateView
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -8,6 +9,7 @@ from core.chunker import SmatChunker
 from core.search import SearchService
 from users.authentication import DEFAULT_API_AUTHENTICATION_CLASSES
 from users.drf_permissions import IsActiveUser
+from users.permissions import is_admin_user, is_head_of_department_user
 
 
 class SearchView(APIView):
@@ -20,7 +22,7 @@ class SearchView(APIView):
 
         if not query:
             return Response(
-                {"error": "'query' is required."},
+                {"error": "Поле 'query' обязательно для заполнения."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -28,12 +30,12 @@ class SearchView(APIView):
             top_k = int(top_k)
         except (TypeError, ValueError):
             return Response(
-                {"error": "'top_k' must be an integer."},
+                {"error": "Поле 'top_k' должно быть целым числом."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         if top_k <= 0:
             return Response(
-                {"error": "'top_k' must be greater than 0."},
+                {"error": "Поле 'top_k' должно быть больше 0."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -50,7 +52,7 @@ class ChunkTextView(APIView):
 
         if not isinstance(text, str) or not text.strip():
             return Response(
-                {"error": "'text' must be a non-empty string."},
+                {"error": "Поле 'text' должно быть непустой строкой."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -65,8 +67,27 @@ class ChunkTextView(APIView):
         )
 
 
-class ManualTestPageView(TemplateView):
+class ManualTestPageView(LoginRequiredMixin, UserPassesTestMixin, TemplateView):
     template_name = "manual_test.html"
+    login_url = "/admin/login/"
+
+    def test_func(self):
+        return is_admin_user(self.request.user) or is_head_of_department_user(self.request.user)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        profile = getattr(self.request.user, "profile", None)
+        context["current_user"] = {
+            "username": self.request.user.username,
+            "group_type": getattr(profile, "group_type", "—"),
+            "access_level": getattr(profile, "access_level", "—"),
+        }
+        context["can_create_users"] = is_admin_user(self.request.user) or is_head_of_department_user(
+            self.request.user
+        )
+        context["can_manage_roles"] = is_admin_user(self.request.user)
+        context["can_delete_users"] = is_admin_user(self.request.user)
+        return context
 
 
 class StartPageView(TemplateView):
