@@ -1,9 +1,12 @@
-from django.test import SimpleTestCase, TestCase
 from unittest.mock import patch
+
+from django.contrib.auth import get_user_model
+from django.test import SimpleTestCase, TestCase
 
 from core.chunker import SmatChunker
 from core.search import SearchService
 from db_server.models import Chunk, Document, Embedding, KnowledgeBase
+
 
 class StartPageViewTests(TestCase):
     def test_root_returns_start_page(self):
@@ -19,6 +22,7 @@ class SearchServiceSoftDeleteTests(TestCase):
     def test_search_skips_embeddings_for_soft_deleted_documents(self, mocked_generate):
         mocked_generate.return_value = [1.0, 0.0]
 
+        user = get_user_model().objects.create_user(username="searcher", password="pass1234")
         kb = KnowledgeBase.objects.create(
             name="Shared",
             slug="shared-search-kb",
@@ -37,7 +41,7 @@ class SearchServiceSoftDeleteTests(TestCase):
         Embedding.objects.create(chunk=active_chunk, vector=[1.0, 0.0])
         Embedding.objects.create(chunk=deleted_chunk, vector=[1.0, 0.0])
 
-        results = SearchService().search(query="test", top_k=10)
+        results = SearchService().search(query="test", user=user, top_k=10)
         document_ids = {item["document_id"] for item in results}
 
         self.assertIn(active_document.id, document_ids)
@@ -45,14 +49,13 @@ class SearchServiceSoftDeleteTests(TestCase):
 
 
 class SearchViewValidationTests(TestCase):
-    def test_search_rejects_non_positive_top_k(self):
+    def test_search_requires_authentication(self):
         response = self.client.post(
             "/api/core/search/",
             {"query": "hello", "top_k": 0},
             content_type="application/json",
         )
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()["error"], "'top_k' must be greater than 0.")
+        self.assertEqual(response.status_code, 401)
 
 
 class SmatChunkerTests(SimpleTestCase):

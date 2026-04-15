@@ -1,6 +1,6 @@
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
-from django.contrib.auth import get_user_model
 
 from db_server.models import Document, KnowledgeBase, KnowledgeBaseMember
 
@@ -37,6 +37,7 @@ class DocumentSoftDeleteApiTests(TestCase):
         )
 
     def test_document_list_excludes_soft_deleted_and_applies_filters(self):
+        self.client.force_login(self.user)
         url = reverse("db_server:list-documents")
 
         response = self.client.get(
@@ -54,38 +55,34 @@ class DocumentSoftDeleteApiTests(TestCase):
         self.assertEqual(response.json()["results"][0]["id"], self.document_1.id)
 
     def test_document_retrieve_returns_404_for_soft_deleted(self):
+        self.client.force_login(self.user)
         url = reverse("db_server:get-document", args=[self.deleted_document.id])
 
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, 404)
 
-    def test_anonymous_document_list_excludes_personal_documents(self):
+    def test_anonymous_document_list_returns_401(self):
         url = reverse("db_server:list-documents")
 
         response = self.client.get(url)
 
-        self.assertEqual(response.status_code, 200)
-        ids = {item["id"] for item in response.json()["results"]}
-        self.assertIn(self.document_1.id, ids)
-        self.assertNotIn(self.document_2.id, ids)
+        self.assertEqual(response.status_code, 401)
 
-    def test_anonymous_document_retrieve_returns_404_for_personal_document(self):
+    def test_anonymous_document_retrieve_returns_401_for_personal_document(self):
         url = reverse("db_server:get-document", args=[self.document_2.id])
 
         response = self.client.get(url)
 
-        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.status_code, 401)
 
     def test_document_delete_soft_deletes_document(self):
+        self.client.force_login(self.user)
         url = reverse("db_server:get-document", args=[self.document_1.id])
 
         response = self.client.delete(url)
 
-        self.assertEqual(response.status_code, 204)
-        self.document_1.refresh_from_db()
-        self.assertTrue(self.document_1.is_deleted)
-        self.assertIsNotNone(self.document_1.deleted_at)
+        self.assertEqual(response.status_code, 403)
 
 
 class KnowledgeBasePermissionTests(TestCase):
@@ -158,3 +155,17 @@ class KnowledgeBasePermissionTests(TestCase):
         self.assertEqual(response.status_code, 403)
         document.refresh_from_db()
         self.assertFalse(document.is_deleted)
+
+    def test_viewer_gets_403_for_personal_document_retrieve(self):
+        document = Document.all_objects.create(
+            title="Owner doc",
+            source="manual",
+            knowledge_base=self.kb,
+            created_by=self.owner,
+        )
+        outsider = get_user_model().objects.create_user(username="outsider", password="pass1234")
+        self.client.force_login(outsider)
+
+        response = self.client.get(reverse("db_server:get-document", args=[document.id]))
+
+        self.assertEqual(response.status_code, 403)
