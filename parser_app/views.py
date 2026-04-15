@@ -1,33 +1,25 @@
-import json
 import logging
 import os
 import tempfile
-from urllib import error, request as urlrequest
 
-from django.conf import settings
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.chunker import SmatChunker
+from db_server.services import DocumentService
 from parser_app.parsers.factory import ParserFactory
 from parser_app.serializer import ParserFileSerializer
+from users.authentication import DEFAULT_API_AUTHENTICATION_CLASSES
+from users.drf_permissions import IsActiveUser
 
 logger = logging.getLogger(__name__)
 
 
 class ParseDocumentView(APIView):
-    @staticmethod
-    def _post_json(path, payload):
-        body = json.dumps(payload).encode("utf-8")
-        endpoint = f"{settings.INTERNAL_API_BASE_URL.rstrip('/')}{path}"
-        req = urlrequest.Request(
-            endpoint,
-            data=body,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        with urlrequest.urlopen(req) as resp:
-            return json.loads(resp.read().decode("utf-8"))
+    authentication_classes = DEFAULT_API_AUTHENTICATION_CLASSES
+    permission_classes = [IsAuthenticated, IsActiveUser]
 
     def post(self, request):
         serializer = ParserFileSerializer(data=request.data)
@@ -46,35 +38,29 @@ class ParseDocumentView(APIView):
             parser = ParserFactory.get_parser(ext)
             parsed_data = parser.parse(tmp_path)
 
-            chunk_result = self._post_json(
-                "/api/core/chunk/",
+            chunks = SmatChunker().split_text(parsed_data["text"])
+            document = DocumentService.save_document(
                 {
-                    "text": parsed_data["text"],
-                    "metadata": parsed_data.get("metadata", {}),
-                },
-            )
-
-            document_result = self._post_json(
-                "/api/db/documents/pipeline-result/",
-                {
-                    "chunks": chunk_result["chunks"],
+                    "chunks": chunks,
                     "title": file.name,
                     "source": "parser_api",
-                },
+                    "knowledge_base_id": request.data.get("knowledge_base_id"),
+                    "created_by": request.user,
+                    "actor_user": request.user,
+                }
             )
 
-            return Response(document_result, status=status.HTTP_200_OK)
-        except error.HTTPError as e:
             return Response(
-                {"error": f"Internal API error: {e.reason}"},
-                status=status.HTTP_502_BAD_GATEWAY,
+                {
+                    "document_id": document.id,
+                    "chunks_count": len(chunks),
+                    "knowledge_base_id": document.knowledge_base_id,
+                    "visibility": document.knowledge_base.visibility,
+                    "owner_id": document.knowledge_base.owner_id,
+                },
+                status=status.HTTP_200_OK,
             )
-        except error.URLError as e:
-            return Response(
-                {"error": f"Internal API unavailable: {e.reason}"},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE,
-            )
-        except Exception as e:
+        except Exception:
             logger.exception("Unexpected parser pipeline failure")
             return Response(
                 {"error": "Unexpected server error while processing document."},

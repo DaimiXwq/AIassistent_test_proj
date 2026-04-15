@@ -1,30 +1,28 @@
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from django.db.models import Q
 
-from db_server.models import Document, KnowledgeBase
+from db_server.models import Document
 from db_server.services import DocumentService, KnowledgeBaseAccessService
+from users.authentication import DEFAULT_API_AUTHENTICATION_CLASSES
+from users.drf_permissions import IsActiveUser
 
 
 class DocumentListView(APIView):
+    authentication_classes = DEFAULT_API_AUTHENTICATION_CLASSES
+    permission_classes = [IsAuthenticated, IsActiveUser]
     SORT_FIELDS = {"created_at", "title", "source", "id"}
 
     def get(self, request):
         queryset = Document.objects.select_related("knowledge_base")
-        user = request.user if request.user.is_authenticated else None
+        user = request.user
 
-        if user is None:
-            queryset = queryset.filter(knowledge_base__visibility=KnowledgeBase.Visibility.SHARED)
-        else:
-            queryset = queryset.filter(
-                Q(knowledge_base__visibility=KnowledgeBase.Visibility.SHARED)
-                | Q(knowledge_base__owner=user)
-                | Q(
-                    knowledge_base__members__user=user,
-                    knowledge_base__members__role__in=KnowledgeBaseAccessService.READ_ROLES,
-                )
-            ).distinct()
+        queryset = KnowledgeBaseAccessService.filter_documents_by_operation(
+            queryset=queryset,
+            user=user,
+            operation=KnowledgeBaseAccessService.Operation.READ,
+        )
 
         knowledge_base_id = request.query_params.get("knowledge_base")
         if knowledge_base_id:
@@ -91,6 +89,9 @@ class DocumentListView(APIView):
 
 
 class DocumentPipelineResultCreateView(APIView):
+    authentication_classes = DEFAULT_API_AUTHENTICATION_CLASSES
+    permission_classes = [IsAuthenticated, IsActiveUser]
+
     def post(self, request):
         chunks = request.data.get("chunks")
 
@@ -105,8 +106,8 @@ class DocumentPipelineResultCreateView(APIView):
             "title": request.data.get("title"),
             "source": request.data.get("source"),
             "knowledge_base_id": request.data.get("knowledge_base_id"),
-            "created_by": request.user if request.user.is_authenticated else None,
-            "actor_user": request.user if request.user.is_authenticated else None,
+            "created_by": request.user,
+            "actor_user": request.user,
         }
         document = DocumentService.save_document(payload)
 
@@ -123,6 +124,9 @@ class DocumentPipelineResultCreateView(APIView):
 
 
 class DocumentRetrieveView(APIView):
+    authentication_classes = DEFAULT_API_AUTHENTICATION_CLASSES
+    permission_classes = [IsAuthenticated, IsActiveUser]
+
     def get(self, request, document_id):
         document = Document.objects.filter(id=document_id).prefetch_related("chunks").first()
 
@@ -131,11 +135,11 @@ class DocumentRetrieveView(APIView):
                 {"error": "Document not found."},
                 status=status.HTTP_404_NOT_FOUND,
             )
-        actor_user = request.user if request.user.is_authenticated else None
-        if not KnowledgeBaseAccessService.can_read_documents(document.knowledge_base, actor_user):
+
+        if not KnowledgeBaseAccessService.can_read_documents(document.knowledge_base, request.user):
             return Response(
-                {"error": "Document not found."},
-                status=status.HTTP_404_NOT_FOUND,
+                {"error": "Permission denied."},
+                status=status.HTTP_403_FORBIDDEN,
             )
 
         return Response(
@@ -159,6 +163,7 @@ class DocumentRetrieveView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
     def delete(self, request, document_id):
         document = Document.all_objects.filter(id=document_id).first()
 
@@ -170,6 +175,6 @@ class DocumentRetrieveView(APIView):
 
         DocumentService.soft_delete_document(
             document=document,
-            actor_user=request.user if request.user.is_authenticated else None,
+            actor_user=request.user,
         )
         return Response(status=status.HTTP_204_NO_CONTENT)

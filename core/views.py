@@ -1,13 +1,19 @@
 from django.views.generic import TemplateView
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.chunker import SmatChunker
 from core.search import SearchService
+from users.authentication import DEFAULT_API_AUTHENTICATION_CLASSES
+from users.drf_permissions import IsActiveUser
 
 
 class SearchView(APIView):
+    authentication_classes = DEFAULT_API_AUTHENTICATION_CLASSES
+    permission_classes = [IsAuthenticated, IsActiveUser]
+
     def post(self, request):
         query = request.data.get("query")
         top_k = request.data.get("top_k", 5)
@@ -31,11 +37,14 @@ class SearchView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        results = SearchService().search(query=query, top_k=top_k)
+        results = SearchService().search(query=query, user=request.user, top_k=top_k)
         return Response({"results": results}, status=status.HTTP_200_OK)
 
 
 class ChunkTextView(APIView):
+    authentication_classes = DEFAULT_API_AUTHENTICATION_CLASSES
+    permission_classes = [IsAuthenticated, IsActiveUser]
+
     def post(self, request):
         text = request.data.get("text")
 
