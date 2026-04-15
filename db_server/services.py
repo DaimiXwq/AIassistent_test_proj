@@ -1,5 +1,69 @@
-from .models import Chunk, Document, Embedding, KnowledgeBase
+from rest_framework.exceptions import PermissionDenied
+
+from .models import Chunk, Document, Embedding, KnowledgeBase, KnowledgeBaseMember
 from core.embeddings import EmbeddingService
+
+
+class KnowledgeBaseAccessService:
+    MANAGE_ROLES = {KnowledgeBaseMember.Role.OWNER, KnowledgeBaseMember.Role.EDITOR}
+    READ_ROLES = {
+        KnowledgeBaseMember.Role.OWNER,
+        KnowledgeBaseMember.Role.EDITOR,
+        KnowledgeBaseMember.Role.VIEWER,
+    }
+
+    @staticmethod
+    def _get_user_membership(knowledge_base, user):
+        if user is None or not getattr(user, "is_authenticated", False):
+            return None
+        return KnowledgeBaseMember.objects.filter(
+            knowledge_base=knowledge_base,
+            user=user,
+        ).first()
+
+    @staticmethod
+    def can_manage_documents(knowledge_base, user):
+        if (
+            user is not None
+            and getattr(user, "is_authenticated", False)
+            and knowledge_base.owner_id == user.id
+        ):
+            return True
+
+        membership = KnowledgeBaseAccessService._get_user_membership(knowledge_base, user)
+        if membership and membership.role in KnowledgeBaseAccessService.MANAGE_ROLES:
+            return True
+
+        # System fallback for legacy shared default KB usage without explicit memberships.
+        if (
+            user is None
+            and knowledge_base.owner_id is None
+            and not knowledge_base.members.exists()
+            and knowledge_base.visibility == KnowledgeBase.Visibility.SHARED
+        ):
+            return True
+
+        return False
+
+    @staticmethod
+    def assert_can_manage_documents(knowledge_base, user):
+        if not KnowledgeBaseAccessService.can_manage_documents(knowledge_base, user):
+            raise PermissionDenied("Only knowledge base owner/editor can manage documents.")
+
+    @staticmethod
+    def can_read_documents(knowledge_base, user):
+        if knowledge_base.visibility == KnowledgeBase.Visibility.SHARED:
+            return True
+
+        if (
+            user is not None
+            and getattr(user, "is_authenticated", False)
+            and knowledge_base.owner_id == user.id
+        ):
+            return True
+
+        membership = KnowledgeBaseAccessService._get_user_membership(knowledge_base, user)
+        return bool(membership and membership.role in KnowledgeBaseAccessService.READ_ROLES)
 
 
 class DocumentService:
@@ -23,6 +87,10 @@ class DocumentService:
     @staticmethod
     def save_document(data):
         knowledge_base = DocumentService._resolve_knowledge_base(data)
+        KnowledgeBaseAccessService.assert_can_manage_documents(
+            knowledge_base=knowledge_base,
+            user=data.get("actor_user"),
+        )
         document = Document.objects.create(
             title=data.get("title") or "Uploaded Document",
             source=data.get("source") or "api",
@@ -47,3 +115,11 @@ class DocumentService:
             )
 
         return document
+
+    @staticmethod
+    def soft_delete_document(document, actor_user):
+        KnowledgeBaseAccessService.assert_can_manage_documents(
+            knowledge_base=document.knowledge_base,
+            user=actor_user,
+        )
+        document.soft_delete()
