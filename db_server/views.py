@@ -92,6 +92,7 @@ class DocumentPipelineResultCreateView(APIView):
             "source": request.data.get("source"),
             "knowledge_base_id": request.data.get("knowledge_base_id"),
             "created_by": request.user if request.user.is_authenticated else None,
+            "actor_user": request.user if request.user.is_authenticated else None,
         }
         document = DocumentService.save_document(payload)
 
@@ -147,5 +148,8 @@ class DocumentRetrieveView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        document.soft_delete()
+        DocumentService.soft_delete_document(
+            document=document,
+            actor_user=request.user if request.user.is_authenticated else None,
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
