@@ -19,7 +19,9 @@ class SearchService:
 
         results = []
 
-        embeddings = Embedding.objects.select_related("chunk").all()
+        embeddings = Embedding.objects.select_related("chunk", "chunk__document").filter(
+            chunk__document__is_deleted=False
+        )
 
         for emb in embeddings:
             score = cosine_similarity(query_vector, emb.vector)

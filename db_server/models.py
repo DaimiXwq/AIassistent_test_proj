@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
 
 
 class KnowledgeBase(models.Model):
@@ -32,6 +33,10 @@ class KnowledgeBase(models.Model):
 
 
 class Document(models.Model):
+    class ActiveDocumentManager(models.Manager):
+        def get_queryset(self):
+            return super().get_queryset().filter(is_deleted=False)
+
     title = models.CharField(max_length=255)
     source = models.CharField(max_length=255, null=True)
     knowledge_base = models.ForeignKey(
@@ -47,11 +52,23 @@ class Document(models.Model):
         related_name="created_documents",
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    is_deleted = models.BooleanField(default=False)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+
+    objects = ActiveDocumentManager()
+    all_objects = models.Manager()
 
     class Meta:
         indexes = [
             models.Index(fields=["knowledge_base", "created_at"], name="db_server_d_knowled_324a38_idx"),
         ]
+
+    def soft_delete(self):
+        if self.is_deleted:
+            return
+        self.is_deleted = True
+        self.deleted_at = timezone.now()
+        self.save(update_fields=["is_deleted", "deleted_at"])
 
 
 class Chunk(models.Model):
