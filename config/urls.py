@@ -30,4 +30,5 @@ urlpatterns = [
         "api/assistant/",
         include(("ai_assistent_app.urls", "ai_assistent_app"), namespace="ai_assistent_app"),
     ),
+    path("api/users/", include(("users.urls", "users"), namespace="users")),
 ]
