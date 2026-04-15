@@ -14,7 +14,7 @@ class StartPageViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "start_page.html")
-        self.assertContains(response, "AI Assistant Platform")
+        self.assertContains(response, "Добро пожаловать в AI Assistant")
 
 
 class SearchServiceSoftDeleteTests(TestCase):
