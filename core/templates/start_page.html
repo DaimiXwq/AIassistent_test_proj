@@ -1,60 +1,269 @@
 <!doctype html>
-<html lang="en">
+<html lang="ru">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AI Assistant Platform</title>
+  <title>Платформа AI Assistant</title>
   <style>
+    :root {
+      --bg: #f3f6fb;
+      --surface: #ffffff;
+      --surface-muted: #eaf0fa;
+      --text: #101828;
+      --text-muted: #344054;
+      --border: #9fb2d1;
+      --primary: #0f3fb3;
+      --primary-hover: #0b3190;
+      --secondary: #1d2939;
+      --secondary-hover: #111927;
+      --focus: #ffb000;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f5f7fb;
-      color: #1f2937;
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      font-size: 20px;
     }
+
     .container {
-      max-width: 900px;
-      margin: 64px auto;
-      padding: 24px;
-      text-align: center;
+      width: min(1200px, 100% - 32px);
+      margin: 36px auto 56px;
     }
+
+    .hero,
+    .section {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: 18px;
+      padding: 28px;
+      box-shadow: 0 4px 12px rgba(16, 24, 40, 0.07);
+    }
+
+    h1,
+    h2,
+    h3 {
+      margin-top: 0;
+      margin-bottom: 14px;
+      line-height: 1.25;
+    }
+
     h1 {
-      margin-bottom: 8px;
       font-size: 2rem;
     }
+
+    h2 {
+      font-size: 1.7rem;
+      margin-top: 36px;
+    }
+
     p {
-      margin-bottom: 24px;
+      margin-top: 0;
+      margin-bottom: 18px;
+      color: var(--text-muted);
       font-size: 1.05rem;
-      color: #4b5563;
     }
+
     .actions {
-      display: flex;
-      gap: 12px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
       justify-content: center;
-      flex-wrap: wrap;
-    }
-    a {
+      min-height: 58px;
+      width: 100%;
+      padding: 14px 20px;
+      border-radius: 14px;
+      border: 2px solid transparent;
       text-decoration: none;
-      padding: 10px 16px;
-      border-radius: 8px;
-      border: 1px solid #d1d5db;
-      color: #111827;
-      background: white;
+      font-size: 1.02rem;
+      font-weight: 700;
+      text-align: center;
+      transition: background 0.2s ease, border-color 0.2s ease, transform 0.1s ease;
     }
-    a.primary {
-      background: #2563eb;
-      color: white;
-      border-color: #2563eb;
+
+    .btn:focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      border-color: var(--primary-hover);
+    }
+
+    .btn-secondary {
+      background: var(--secondary);
+      color: #fff;
+      border-color: var(--secondary);
+    }
+
+    .btn-secondary:hover {
+      background: var(--secondary-hover);
+      border-color: var(--secondary-hover);
+    }
+
+    .hint {
+      background: var(--surface-muted);
+      border-left: 6px solid var(--primary);
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 14px;
+      color: var(--text);
+      font-size: 1rem;
+    }
+
+    .pages-grid {
+      margin-top: 18px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .page-card {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+    }
+
+    .page-card h3 {
+      font-size: 1.25rem;
+      margin-bottom: 8px;
+    }
+
+    .page-card p {
+      margin-bottom: 14px;
+      font-size: 0.98rem;
+    }
+
+    .page-card a {
+      color: var(--primary);
+      font-weight: 700;
+      text-decoration-thickness: 2px;
+      text-underline-offset: 3px;
+    }
+
+    @media (min-width: 768px) {
+      body {
+        font-size: 21px;
+      }
+
+      .container {
+        width: min(1200px, 100% - 56px);
+        margin-top: 48px;
+      }
+
+      h1 {
+        font-size: 2.4rem;
+      }
+
+      .actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .pages-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (min-width: 1100px) {
+      body {
+        font-size: 22px;
+      }
+
+      .hero {
+        padding: 34px;
+      }
+
+      h1 {
+        font-size: 2.8rem;
+      }
+
+      .actions {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
     }
   </style>
 </head>
 <body>
   <main class="container">
-    <h1>AI Assistant Platform</h1>
-    <p>Сервис для парсинга документов, разбиения на чанки и поиска по данным.</p>
-    <div class="actions">
-      <a class="primary" href="/manual-test/">Open manual test page</a>
-      <a href="/admin/">Open Django admin</a>
-    </div>
+    <section class="hero" id="home" aria-labelledby="home-title">
+      <h1 id="home-title">Добро пожаловать в AI Assistant</h1>
+      <p>
+        Это стартовая страница сервиса. Здесь можно быстро перейти к основным разделам,
+        чтобы начать работу без лишних шагов.
+      </p>
+      <div class="actions" aria-label="Основные действия">
+        <a class="btn btn-primary" href="/admin/login/">Вход</a>
+        <a class="btn btn-primary" href="/api/users/admin/users/">Управление пользователями</a>
+        <a class="btn btn-primary" href="/api/db/documents/">База документов</a>
+        <a class="btn btn-secondary" href="/manual-test/">Помощь</a>
+      </div>
+      <p class="hint">
+        Подсказка: если вы только начинаете, сначала нажмите «Вход», затем откройте «База документов».
+        Для настройки доступа сотрудников используйте раздел «Управление пользователями».
+      </p>
+    </section>
+
+    <section class="section" aria-labelledby="ia-title">
+      <h2 id="ia-title">Структура разделов</h2>
+      <p>
+        Ниже показана базовая информационная архитектура: где что искать и за что отвечает каждый раздел.
+      </p>
+
+      <div class="pages-grid">
+        <article class="page-card" id="main-page">
+          <h3>Главная</h3>
+          <p>
+            Краткий обзор системы и кнопки быстрого старта. Подходит для ежедневного входа в сервис.
+          </p>
+          <a href="#home">Открыть главную</a>
+        </article>
+
+        <article class="page-card" id="users-roles-page">
+          <h3>Пользователи и роли</h3>
+          <p>
+            Создание пользователей, отключение доступа и назначение ролей. Всё, что связано с правами в системе.
+          </p>
+          <a href="/api/users/admin/users/">Перейти к пользователям и ролям</a>
+        </article>
+
+        <article class="page-card" id="documents-page">
+          <h3>Документы / база знаний</h3>
+          <p>
+            Загрузка документов и просмотр списка материалов. Используйте этот раздел, чтобы собрать общую базу знаний.
+          </p>
+          <a href="/api/db/documents/">Перейти к документам</a>
+        </article>
+
+        <article class="page-card" id="help-page">
+          <h3>Справка / поддержка</h3>
+          <p>
+            Пошаговые подсказки по работе с системой. Выбирайте этот раздел, если не уверены, с чего начать.
+          </p>
+          <a href="/manual-test/">Открыть справку</a>
+        </article>
+      </div>
+    </section>
   </main>
 </body>
 </html>
