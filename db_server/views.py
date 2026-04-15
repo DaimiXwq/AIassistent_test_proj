@@ -6,6 +6,76 @@ from db_server.models import Document
 from db_server.services import DocumentService
 
 
+class DocumentListView(APIView):
+    SORT_FIELDS = {"created_at", "title", "source", "id"}
+
+    def get(self, request):
+        queryset = Document.objects.select_related("knowledge_base")
+
+        knowledge_base_id = request.query_params.get("knowledge_base")
+        if knowledge_base_id:
+            queryset = queryset.filter(knowledge_base_id=knowledge_base_id)
+
+        visibility = request.query_params.get("visibility")
+        if visibility:
+            queryset = queryset.filter(knowledge_base__visibility=visibility)
+
+        source = request.query_params.get("source")
+        if source:
+            queryset = queryset.filter(source=source)
+
+        sort_by = request.query_params.get("sort_by", "created_at")
+        if sort_by not in self.SORT_FIELDS:
+            return Response(
+                {"error": f"Invalid sort_by. Allowed values: {', '.join(sorted(self.SORT_FIELDS))}."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        sort_order = request.query_params.get("sort_order", "desc")
+        if sort_order not in {"asc", "desc"}:
+            return Response(
+                {"error": "Invalid sort_order. Allowed values: asc, desc."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        ordering = sort_by if sort_order == "asc" else f"-{sort_by}"
+        queryset = queryset.order_by(ordering, "-id")
+
+        try:
+            page = max(int(request.query_params.get("page", 1)), 1)
+            page_size = min(max(int(request.query_params.get("page_size", 20)), 1), 100)
+        except ValueError:
+            return Response(
+                {"error": "page and page_size must be integers."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        total = queryset.count()
+        offset = (page - 1) * page_size
+        documents = queryset[offset : offset + page_size]
+
+        return Response(
+            {
+                "count": total,
+                "page": page,
+                "page_size": page_size,
+                "results": [
+                    {
+                        "id": document.id,
+                        "title": document.title,
+                        "source": document.source,
+                        "created_at": document.created_at,
+                        "knowledge_base_id": document.knowledge_base_id,
+                        "visibility": document.knowledge_base.visibility,
+                        "owner_id": document.knowledge_base.owner_id,
+                    }
+                    for document in documents
+                ],
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
 class DocumentPipelineResultCreateView(APIView):
     def post(self, request):
         chunks = request.data.get("chunks")
@@ -68,3 +138,14 @@ class DocumentRetrieveView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+    def delete(self, request, document_id):
+        document = Document.all_objects.filter(id=document_id).first()
+
+        if document is None or document.is_deleted:
+            return Response(
+                {"error": "Document not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        document.soft_delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
