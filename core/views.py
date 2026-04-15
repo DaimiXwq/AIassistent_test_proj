@@ -25,6 +25,11 @@ class SearchView(APIView):
                 {"error": "'top_k' must be an integer."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        if top_k <= 0:
+            return Response(
+                {"error": "'top_k' must be greater than 0."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         results = SearchService().search(query=query, top_k=top_k)
         return Response({"results": results}, status=status.HTTP_200_OK)

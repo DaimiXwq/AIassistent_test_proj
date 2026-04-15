@@ -15,7 +15,8 @@ class SmatChunker:
             if len(current) + len(sentence) < self.max_lenght:
                 current += " " + sentence
             else:
-                chunks.append(current.strip())
+                if current.strip():
+                    chunks.append(current.strip())
                 current = sentence
         
         if current: chunks.append(current.strip())
