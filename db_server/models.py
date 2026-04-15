@@ -33,6 +33,11 @@ class KnowledgeBase(models.Model):
         self.full_clean()
         return super().save(*args, **kwargs)
 
+    class Meta:
+        db_table = "db_server_knowledgebase"
+        verbose_name = "Knowledge base"
+        verbose_name_plural = "Knowledge bases"
+
 
 class Document(models.Model):
     class ActiveDocumentManager(models.Manager):
@@ -61,8 +66,16 @@ class Document(models.Model):
     all_objects = models.Manager()
 
     class Meta:
+        db_table = "db_server_document"
+        verbose_name = "Document"
+        verbose_name_plural = "Documents"
         indexes = [
+            models.Index(fields=["created_at"], name="db_server_d_created_9c57de_idx"),
             models.Index(fields=["knowledge_base", "created_at"], name="db_server_d_knowled_324a38_idx"),
+            models.Index(
+                fields=["knowledge_base", "is_deleted", "created_at"],
+                name="dbs_doc_kb_del_cr_idx",
+            ),
         ]
 
     def soft_delete(self):
@@ -93,6 +106,9 @@ class KnowledgeBaseMember(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        db_table = "db_server_knowledgebase_member"
+        verbose_name = "Knowledge base member"
+        verbose_name_plural = "Knowledge base members"
         constraints = [
             models.UniqueConstraint(
                 fields=["knowledge_base", "user"],
@@ -138,6 +154,11 @@ class KnowledgeBaseInvite(models.Model):
         self.full_clean()
         return super().save(*args, **kwargs)
 
+    class Meta:
+        db_table = "db_server_knowledgebase_invite"
+        verbose_name = "Knowledge base invite"
+        verbose_name_plural = "Knowledge base invites"
+
 
 class Chunk(models.Model):
     document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name="chunks")
@@ -145,8 +166,24 @@ class Chunk(models.Model):
     index = models.IntegerField()
     metadata = models.JSONField(default=dict)
 
+    class Meta:
+        db_table = "db_server_chunk"
+        verbose_name = "Chunk"
+        verbose_name_plural = "Chunks"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["document", "index"],
+                name="db_server_chunk_unique_document_index",
+            )
+        ]
+
 
 class Embedding(models.Model):
     chunk = models.OneToOneField(Chunk, on_delete=models.CASCADE)
     vector = models.JSONField()  # заменим на pgvector
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "db_server_embedding"
+        verbose_name = "Embedding"
+        verbose_name_plural = "Embeddings"
