@@ -12,7 +12,11 @@ app_name = "ai_assistent_app"
 
 urlpatterns = [
     path("health/", AssistantHealthView.as_view(), name="health"),
-    path("threads/", ChatThreadListCreateView.as_view(), name="thread-list-create"),
+    path(
+        "threads/",
+        ChatThreadListCreateView.as_view(),
+        name="thread-list-create",
+    ),
     path(
         "threads/<int:thread_id>/messages/",
         ChatThreadMessagesView.as_view(),
@@ -23,5 +27,9 @@ urlpatterns = [
         ChatMessageFavoriteToggleView.as_view(),
         name="message-favorite-toggle",
     ),
-    path("favorites/", FavoriteMessagesListView.as_view(), name="favorite-messages-list"),
+    path(
+        "favorites/",
+        FavoriteMessagesListView.as_view(),
+        name="favorite-messages-list",
+    ),
 ]
