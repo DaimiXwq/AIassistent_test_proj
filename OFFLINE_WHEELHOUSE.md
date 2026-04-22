@@ -1,32 +1,32 @@
-# Offline wheelhouse: include transitive dependencies
+# Офлайн wheelhouse: включаем транзитивные зависимости
 
-Short answer: **yes, each package in `requirements.txt` has transitive dependencies**.
+Короткий ответ: **да, у каждого пакета из `requirements.txt` есть транзитивные зависимости**.
 
-You do **not** need to manually list all transitive dependencies in `requirements.txt` if you build the wheelhouse correctly.
+Если wheelhouse собирается правильно, **не нужно вручную перечислять** все транзитивные зависимости в `requirements.txt`.
 
-## Recommended flow (online machine)
+## Рекомендуемый процесс (машина с интернетом)
 
-1. Create a clean virtual environment.
-2. Upgrade packaging tools.
-3. Download wheels for `requirements.txt` **with dependencies**.
-4. Export an installed lock (`pip freeze`) for reproducibility.
+1. Создайте чистое виртуальное окружение.
+2. Обновите инструменты упаковки.
+3. Скачайте колёса (`wheels`) для `requirements.txt` **вместе с зависимостями**.
+4. Зафиксируйте точный набор установленных пакетов (`pip freeze`) для воспроизводимости.
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip setuptools wheel
 
-# Downloads direct + transitive dependencies into wheelhouse/
+# Скачивает прямые + транзитивные зависимости в wheelhouse/
 pip download -r requirements.txt -d wheelhouse
 
-# Optional but recommended: validate installation only from local wheelhouse
+# Опционально, но рекомендуется: проверить установку только из локального wheelhouse
 pip install --no-index --find-links=wheelhouse -r requirements.txt
 
-# Capture exact installed set (includes transitives)
+# Фиксируем точный установленный набор (включая транзитивные зависимости)
 pip freeze > requirements.lock.txt
 ```
 
-## Install on offline machine
+## Установка на офлайн-машине
 
 ```bash
 python -m venv .venv
@@ -35,8 +35,8 @@ python -m pip install --upgrade pip setuptools wheel
 pip install --no-index --find-links=wheelhouse -r requirements.txt
 ```
 
-## Important notes
+## Важные замечания
 
-- If offline target OS/Python differs from the online builder, prepare wheelhouse for that exact target.
-- `torch` and `tokenizers` wheels are platform-specific; build/download for the same Python version and architecture as offline host.
-- For `sentence-transformers`, also pre-download model files (e.g. `all-MiniLM-L6-v2`) to a local path.
+- Если офлайн-целевая ОС/Python отличаются от онлайн-машины сборки, готовьте wheelhouse строго под целевую платформу.
+- Колёса `torch` и `tokenizers` платформозависимы; скачивайте/собирайте их под ту же версию Python и архитектуру, что и у офлайн-хоста.
+- Для `sentence-transformers` заранее скачайте файлы модели (например, `all-MiniLM-L6-v2`) в локальный путь.
