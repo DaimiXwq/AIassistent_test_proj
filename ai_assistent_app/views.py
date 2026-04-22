@@ -99,14 +99,26 @@ class ChatThreadMessagesView(APIView):
         serializer.is_valid(raise_exception=True)
 
         with transaction.atomic():
-            message = ChatMessage.objects.create(
-                thread=thread,
-                role=serializer.validated_data["role"],
-                content=serializer.validated_data["content"],
-            )
+            created_messages = [
+                ChatMessage.objects.create(
+                    thread=thread,
+                    role=serializer.validated_data["role"],
+                    content=serializer.validated_data["content"],
+                )
+            ]
+
+            assistant_content = serializer.validated_data.get("assistant_content")
+            if assistant_content:
+                created_messages.append(
+                    ChatMessage.objects.create(
+                        thread=thread,
+                        role=ChatMessage.Role.ASSISTANT,
+                        content=assistant_content,
+                    )
+                )
 
         return Response(
-            {"results": [ChatMessageSerializer(message).data]},
+            {"results": ChatMessageSerializer(created_messages, many=True).data},
             status=status.HTTP_201_CREATED,
         )
 
@@ -126,7 +138,7 @@ class ChatMessageFavoriteToggleView(APIView):
         serializer = ChatMessageFavoriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        message.is_favorite = serializer.validated_data["is_favorite"]
+        message.is_favorite = serializer.validated_data.get("is_favorite", not message.is_favorite)
         message.save(update_fields=["is_favorite"])
         return Response(ChatMessageSerializer(message).data, status=status.HTTP_200_OK)
 

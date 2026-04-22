@@ -9,12 +9,22 @@ class ChatThreadCreateSerializer(serializers.Serializer):
 
 
 class ChatMessageCreateSerializer(serializers.Serializer):
-    role = serializers.ChoiceField(choices=[ChatMessage.Role.USER, ChatMessage.Role.ASSISTANT])
+    role = serializers.ChoiceField(
+        choices=[ChatMessage.Role.USER, ChatMessage.Role.ASSISTANT],
+        required=False,
+        default=ChatMessage.Role.USER,
+    )
     content = serializers.CharField(allow_blank=False, trim_whitespace=True, max_length=MAX_MESSAGE_LENGTH)
+    assistant_content = serializers.CharField(
+        required=False,
+        allow_blank=False,
+        trim_whitespace=True,
+        max_length=MAX_MESSAGE_LENGTH,
+    )
 
 
 class ChatMessageFavoriteSerializer(serializers.Serializer):
-    is_favorite = serializers.BooleanField()
+    is_favorite = serializers.BooleanField(required=False)
 
 
 class ChatThreadSerializer(serializers.ModelSerializer):
