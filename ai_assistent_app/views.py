@@ -5,6 +5,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from ai_assistent_app.models import ChatMessage, ChatThread
+from ai_assistent_app.serializers import (
+    ChatMessageCreateSerializer,
+    ChatMessageFavoriteSerializer,
+    ChatMessageSerializer,
+    ChatThreadCreateSerializer,
+    ChatThreadSerializer,
+)
 from users.authentication import DEFAULT_API_AUTHENTICATION_CLASSES
 from users.drf_permissions import IsActiveUser
 
@@ -46,36 +53,18 @@ class ChatThreadListCreateView(APIView):
                 "page": page,
                 "page_size": page_size,
                 "total": total,
-                "results": [
-                    {
-                        "id": thread.id,
-                        "title": thread.title,
-                        "created_at": thread.created_at,
-                        "updated_at": thread.updated_at,
-                    }
-                    for thread in threads
-                ],
+                "results": ChatThreadSerializer(threads, many=True).data,
             },
             status=status.HTTP_200_OK,
         )
 
     def post(self, request):
-        title = request.data.get("title", "")
-        if title is None:
-            title = ""
-        if not isinstance(title, str):
-            return Response({"error": "Поле title должно быть строкой."}, status=status.HTTP_400_BAD_REQUEST)
+        serializer = ChatThreadCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
-        thread = ChatThread.objects.create(user=request.user, title=title.strip())
-        return Response(
-            {
-                "id": thread.id,
-                "title": thread.title,
-                "created_at": thread.created_at,
-                "updated_at": thread.updated_at,
-            },
-            status=status.HTTP_201_CREATED,
-        )
+        title = serializer.validated_data.get("title", "").strip()
+        thread = ChatThread.objects.create(user=request.user, title=title)
+        return Response(ChatThreadSerializer(thread).data, status=status.HTTP_201_CREATED)
 
 
 class ChatThreadMessagesView(APIView):
@@ -90,17 +79,6 @@ class ChatThreadMessagesView(APIView):
             return None, Response({"error": "Доступ запрещен."}, status=status.HTTP_403_FORBIDDEN)
         return thread, None
 
-    @staticmethod
-    def _serialize_message(message):
-        return {
-            "id": message.id,
-            "thread_id": message.thread_id,
-            "role": message.role,
-            "content": message.content,
-            "is_favorite": message.is_favorite,
-            "created_at": message.created_at,
-        }
-
     def get(self, request, thread_id):
         thread, error_response = self._get_thread(request, thread_id)
         if error_response is not None:
@@ -108,7 +86,7 @@ class ChatThreadMessagesView(APIView):
 
         messages = ChatMessage.objects.filter(thread=thread).order_by("created_at", "id")
         return Response(
-            {"results": [self._serialize_message(message) for message in messages]},
+            {"results": ChatMessageSerializer(messages, many=True).data},
             status=status.HTTP_200_OK,
         )
 
@@ -117,52 +95,25 @@ class ChatThreadMessagesView(APIView):
         if error_response is not None:
             return error_response
 
-        content = request.data.get("content")
-        if not isinstance(content, str) or not content.strip():
-            return Response(
-                {"error": "Поле content обязательно и должно быть непустой строкой."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        assistant_content = request.data.get("assistant_content")
-        create_assistant_message = isinstance(assistant_content, str) and assistant_content.strip()
+        serializer = ChatMessageCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
         with transaction.atomic():
-            user_message = ChatMessage.objects.create(
+            message = ChatMessage.objects.create(
                 thread=thread,
-                role=ChatMessage.Role.USER,
-                content=content.strip(),
+                role=serializer.validated_data["role"],
+                content=serializer.validated_data["content"],
             )
 
-            assistant_message = None
-            if create_assistant_message:
-                assistant_message = ChatMessage.objects.create(
-                    thread=thread,
-                    role=ChatMessage.Role.ASSISTANT,
-                    content=assistant_content.strip(),
-                )
-
-        results = [self._serialize_message(user_message)]
-        if assistant_message is not None:
-            results.append(self._serialize_message(assistant_message))
-
-        return Response({"results": results}, status=status.HTTP_201_CREATED)
+        return Response(
+            {"results": [ChatMessageSerializer(message).data]},
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class ChatMessageFavoriteToggleView(APIView):
     authentication_classes = DEFAULT_API_AUTHENTICATION_CLASSES
     permission_classes = [IsAuthenticated, IsActiveUser]
-
-    @staticmethod
-    def _serialize_message(message):
-        return {
-            "id": message.id,
-            "thread_id": message.thread_id,
-            "role": message.role,
-            "content": message.content,
-            "is_favorite": message.is_favorite,
-            "created_at": message.created_at,
-        }
 
     def patch(self, request, message_id):
         message = ChatMessage.objects.filter(id=message_id).select_related("thread").first()
@@ -172,35 +123,17 @@ class ChatMessageFavoriteToggleView(APIView):
         if message.thread.user_id != request.user.id:
             return Response({"error": "Доступ запрещен."}, status=status.HTTP_403_FORBIDDEN)
 
-        is_favorite = request.data.get("is_favorite")
-        if is_favorite is None:
-            message.is_favorite = not message.is_favorite
-        elif isinstance(is_favorite, bool):
-            message.is_favorite = is_favorite
-        else:
-            return Response(
-                {"error": "Поле is_favorite должно быть булевым значением."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        serializer = ChatMessageFavoriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
+        message.is_favorite = serializer.validated_data["is_favorite"]
         message.save(update_fields=["is_favorite"])
-        return Response(self._serialize_message(message), status=status.HTTP_200_OK)
+        return Response(ChatMessageSerializer(message).data, status=status.HTTP_200_OK)
 
 
 class FavoriteMessagesListView(APIView):
     authentication_classes = DEFAULT_API_AUTHENTICATION_CLASSES
     permission_classes = [IsAuthenticated, IsActiveUser]
-
-    @staticmethod
-    def _serialize_message(message):
-        return {
-            "id": message.id,
-            "thread_id": message.thread_id,
-            "role": message.role,
-            "content": message.content,
-            "is_favorite": message.is_favorite,
-            "created_at": message.created_at,
-        }
 
     def get(self, request):
         messages = ChatMessage.objects.filter(
@@ -209,6 +142,6 @@ class FavoriteMessagesListView(APIView):
         ).order_by("-created_at", "-id")
 
         return Response(
-            {"results": [self._serialize_message(message) for message in messages]},
+            {"results": ChatMessageSerializer(messages, many=True).data},
             status=status.HTTP_200_OK,
         )
