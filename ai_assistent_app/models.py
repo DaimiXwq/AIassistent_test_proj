@@ -40,6 +40,7 @@ class ChatMessage(models.Model):
     is_favorite = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     metadata = models.JSONField(default=dict, blank=True)
+    source = models.CharField(max_length=255, blank=True, default="")
 
     class Meta:
         ordering = ["created_at", "id"]
@@ -51,5 +52,5 @@ class ChatMessage(models.Model):
     def __str__(self):
         return (
             f"ChatMessage(id={self.id}, thread_id={self.thread_id}, "
-            f"role={self.role}, favorite={self.is_favorite})"
+            f"role={self.role}, favorite={self.is_favorite}, source={self.source!r})"
         )
